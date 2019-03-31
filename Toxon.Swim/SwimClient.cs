@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Toxon.Swim.Messages;
 using Toxon.Swim.Models;
 using Toxon.Swim.Networking;
+using Toxon.Swim.Services;
 
 namespace Toxon.Swim
 {
@@ -16,6 +17,7 @@ namespace Toxon.Swim
         public SwimMeta Meta { get; private set; }
         
         internal SwimTransport Transport { get; }
+        internal FailureDetector FailureDetector { get; }
 
         public event MembershipChangedEvent MembershipChanged;
         public event MembershipUpdatedEvent MembershipUpdated;
@@ -28,21 +30,18 @@ namespace Toxon.Swim
             Meta = initialMeta;
 
             Transport = new SwimTransport(new UdpTransport(local, new UdpTransportOptions(options.MessageSerializer, options.Logger)));
+            FailureDetector = new FailureDetector(Transport, new FailureDetectorOptions(options.Logger));
         }
 
         public async Task StartAsync()
         {
             await Transport.StartAsync();
-
-            // throw new NotImplementedException("Start listening on local, start services and timers");
+            await FailureDetector.StartAsync();
         }
 
         public async Task JoinAsync(IReadOnlyCollection<SwimHost> hosts)
         {
-            await Transport.SendAsync(new[]
-            {
-                new PingMessage(1),
-            }, hosts.First());
+            await FailureDetector.PingAsync(hosts.First());
             // throw new NotImplementedException("Try to contact hosts to join a cluster");
         }
 
@@ -54,9 +53,8 @@ namespace Toxon.Swim
 
         public async Task LeaveAsync()
         {
+            await FailureDetector.StopAsync();
             await Transport.StopAsync();
-
-            throw new NotImplementedException();
         }
     }
 }
