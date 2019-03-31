@@ -7,6 +7,8 @@ namespace Toxon.Swim.Networking
 {
     public interface ITransport
     {
+        event TransportMessageEvent OnMessage;
+        
         Task StartAsync();
         Task SendAsync(IReadOnlyCollection<SwimMessage> messages, SwimHost host);
         Task StopAsync();

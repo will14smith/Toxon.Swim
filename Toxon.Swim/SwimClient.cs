@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Toxon.Swim.Messages;
 using Toxon.Swim.Models;
@@ -16,7 +15,7 @@ namespace Toxon.Swim
         public SwimHost Local { get; }
         public SwimMeta Meta { get; private set; }
         
-        internal ITransport Transport { get; private set; }
+        internal SwimTransport Transport { get; }
 
         public event MembershipChangedEvent MembershipChanged;
         public event MembershipUpdatedEvent MembershipUpdated;
@@ -28,7 +27,7 @@ namespace Toxon.Swim
 
             Meta = initialMeta;
 
-            Transport = new UdpTransport(this, new UdpTransportOptions(local, options.MessageSerializer, options.Logger));
+            Transport = new SwimTransport(new UdpTransport(local, new UdpTransportOptions(options.MessageSerializer, options.Logger)));
         }
 
         public async Task StartAsync()

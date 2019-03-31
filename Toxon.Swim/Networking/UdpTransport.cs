@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Toxon.Swim.Messages;
@@ -13,20 +12,20 @@ namespace Toxon.Swim.Networking
 {
     public class UdpTransport : ITransport
     {
-        private Thread _listenerThread;
-
         private readonly UdpClient _udpClient;
-
-        private readonly SwimClient _swim;
         private readonly UdpTransportOptions _options;
 
-        public UdpTransport(SwimClient swim, UdpTransportOptions options)
-        {
-            _udpClient = new UdpClient(options.Local.AsIPEndPoint());
+        private Thread _listenerThread;
 
-            _swim = swim;
+
+        public UdpTransport(SwimHost local, UdpTransportOptions options)
+        {
+            _udpClient = new UdpClient(local.AsIPEndPoint());
+
             _options = options;
         }
+
+        public event TransportMessageEvent OnMessage;
 
         public Task StartAsync()
         {
@@ -51,7 +50,7 @@ namespace Toxon.Swim.Networking
 
                 var message = _options.MessageSerializer.Deserialize(result);
 
-                throw new NotImplementedException();
+                OnMessage?.Invoke(this, new TransportMessageEventArgs(message, remoteEndpoint));
             }
         }
 
