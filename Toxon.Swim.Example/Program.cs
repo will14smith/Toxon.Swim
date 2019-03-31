@@ -11,7 +11,7 @@ namespace Toxon.Swim.Example
         static async Task Main(string[] args)
         {
             var logger = new LoggerConfiguration()
-                .WriteTo.Console()
+                .WriteTo.Async(a => a.Console())
                 .MinimumLevel.Debug()
                 .CreateLogger();
 
