@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Toxon.Swim", "Toxon.Swim\To
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Toxon.Swim.Tests", "Toxon.Swim.Tests\Toxon.Swim.Tests.csproj", "{DB13A4AD-59B5-4992-80F7-A3657C7E5C60}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Toxon.Swim.Example", "Toxon.Swim.Example\Toxon.Swim.Example.csproj", "{CE68A6B3-71E0-4C62-966F-0FBC22814626}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{DB13A4AD-59B5-4992-80F7-A3657C7E5C60}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB13A4AD-59B5-4992-80F7-A3657C7E5C60}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB13A4AD-59B5-4992-80F7-A3657C7E5C60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE68A6B3-71E0-4C62-966F-0FBC22814626}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE68A6B3-71E0-4C62-966F-0FBC22814626}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE68A6B3-71E0-4C62-966F-0FBC22814626}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE68A6B3-71E0-4C62-966F-0FBC22814626}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
