@@ -10,7 +10,7 @@ namespace Toxon.Swim.Messages
             Destination = destination;
         }
 
-        public override SwimMessageType Type => SwimMessageType.Ping;
+        public override SwimMessageType Type => SwimMessageType.PingReq;
 
         public ulong SequenceNumber { get; }
         public SwimHost Destination { get; }

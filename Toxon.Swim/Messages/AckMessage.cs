@@ -7,7 +7,7 @@
             SequenceNumber = sequenceNumber;
         }
 
-        public override SwimMessageType Type => SwimMessageType.Ping;
+        public override SwimMessageType Type => SwimMessageType.Ack;
 
         public ulong SequenceNumber { get; }
     }

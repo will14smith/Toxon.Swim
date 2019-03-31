@@ -41,18 +41,18 @@ namespace Toxon.Swim.Networking
         private void HandleMessage(object sender, TransportMessageEventArgs args)
         {
             var message = args.Message;
-            var remoteEndpoint = args.RemoteEndpoint;
+            var remote = new SwimHost(args.RemoteEndpoint);
 
             switch (message.Type)
             {
                 case SwimMessageType.Ping:
-                    OnPing?.Invoke(this, new TransportPingEventArgs(message as PingMessage, remoteEndpoint));
+                    OnPing?.Invoke(this, new TransportPingEventArgs(message as PingMessage, remote));
                     break;
                 case SwimMessageType.PingReq:
-                    OnPingReq?.Invoke(this, new TransportPingReqEventArgs(message as PingReqMessage, remoteEndpoint));
+                    OnPingReq?.Invoke(this, new TransportPingReqEventArgs(message as PingReqMessage, remote));
                     break;
                 case SwimMessageType.Ack:
-                    OnAck?.Invoke(this, new TransportAckEventArgs(message as AckMessage, remoteEndpoint));
+                    OnAck?.Invoke(this, new TransportAckEventArgs(message as AckMessage, remote));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

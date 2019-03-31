@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Toxon.Swim.Messages;
+using Toxon.Swim.Models;
 
 namespace Toxon.Swim.Networking
 {
@@ -8,12 +9,12 @@ namespace Toxon.Swim.Networking
     public class TransportPingEventArgs
     {
         public PingMessage Message { get; }
-        public IPEndPoint RemoteEndpoint { get; }
+        public SwimHost Remote { get; }
 
-        public TransportPingEventArgs(PingMessage message, IPEndPoint remoteEndpoint)
+        public TransportPingEventArgs(PingMessage message, SwimHost remote)
         {
             Message = message;
-            RemoteEndpoint = remoteEndpoint;
+            Remote = remote;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Toxon.Swim.Messages;
+using Toxon.Swim.Models;
 
 namespace Toxon.Swim.Networking
 {
@@ -8,12 +9,12 @@ namespace Toxon.Swim.Networking
     public class TransportAckEventArgs
     {
         public AckMessage Message { get; }
-        public IPEndPoint RemoteEndpoint { get; }
+        public SwimHost Remote { get; }
 
-        public TransportAckEventArgs(AckMessage message, IPEndPoint remoteEndpoint)
+        public TransportAckEventArgs(AckMessage message, SwimHost remote)
         {
             Message = message;
-            RemoteEndpoint = remoteEndpoint;
+            Remote = remote;
         }
     }
 }
