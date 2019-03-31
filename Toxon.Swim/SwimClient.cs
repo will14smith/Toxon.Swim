@@ -28,7 +28,7 @@ namespace Toxon.Swim
 
             Meta = initialMeta;
 
-            Transport = new UdpTransport(this, new UdpTransportOptions(local, options.MessageSerializer));
+            Transport = new UdpTransport(this, new UdpTransportOptions(local, options.MessageSerializer, options.Logger));
         }
 
         public async Task StartAsync()

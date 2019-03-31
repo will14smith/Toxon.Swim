@@ -1,9 +1,12 @@
-﻿using Toxon.Swim.Serialization;
+﻿using Serilog;
+using Toxon.Swim.Serialization;
 
 namespace Toxon.Swim
 {
     public class SwimClientOptions
     {
         public IMessageSerializer MessageSerializer { get; set; } = new MessageSerializer();
+         
+        public ILogger Logger { get; set; } = Log.Logger;
     }
 }

@@ -48,6 +48,8 @@ namespace Toxon.Swim.Networking
                 IPEndPoint remoteEndpoint = null;
                 var result = _udpClient.Receive(ref remoteEndpoint);
                 
+                _options.Logger.Debug("Received buffer from {from} with a length of {length} bytes", remoteEndpoint, result.Length);
+
                 throw new NotImplementedException();
             }
         }
@@ -59,7 +61,10 @@ namespace Toxon.Swim.Networking
             // TODO try and bundle buffers into same datagram
             foreach (var buffer in buffers)
             {
-                await _udpClient.SendAsync(buffer.ToArray(), buffer.Length, host.AsIPEndPoint());
+                var remoteEndpoint = host.AsIPEndPoint();
+                _options.Logger.Debug("Sending a buffer to {to} with a length of {length} bytes", remoteEndpoint, buffer.Length);
+
+                await _udpClient.SendAsync(buffer.ToArray(), buffer.Length, remoteEndpoint);
             }
         }
 
