@@ -47,8 +47,9 @@ namespace Toxon.Swim.Networking
             {
                 IPEndPoint remoteEndpoint = null;
                 var result = _udpClient.Receive(ref remoteEndpoint);
-                
                 _options.Logger.Debug("Received buffer from {from} with a length of {length} bytes", remoteEndpoint, result.Length);
+
+                var message = _options.MessageSerializer.Deserialize(result);
 
                 throw new NotImplementedException();
             }

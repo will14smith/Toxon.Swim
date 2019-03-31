@@ -5,7 +5,7 @@
         public abstract SwimMessageType Type { get; }
     }
 
-    public enum SwimMessageType
+    public enum SwimMessageType : byte
     {
         Ping = 1,
         PingReq = 2,

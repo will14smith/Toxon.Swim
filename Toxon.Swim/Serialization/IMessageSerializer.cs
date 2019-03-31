@@ -6,6 +6,6 @@ namespace Toxon.Swim.Serialization
     public interface IMessageSerializer
     {
         ReadOnlyMemory<byte> Serialize(SwimMessage message);
-        SwimMessage Deserialize(ref ReadOnlySpan<byte> buffer);
+        SwimMessage Deserialize(ReadOnlySpan<byte> buffer);
     }
 }
