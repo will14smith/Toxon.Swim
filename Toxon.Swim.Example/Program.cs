@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Serilog;
@@ -17,14 +18,14 @@ namespace Toxon.Swim.Example
 
             var client1 = new SwimClient(
                 new SwimHost(new IPEndPoint(IPAddress.Loopback, 18210)),
-                new SwimMeta(),
+                new SwimMeta(new Dictionary<string, string>()),
                 new SwimClientOptions { Logger = logger }
             );
             await client1.StartAsync();
 
             var client2 = new SwimClient(
                 new SwimHost(new IPEndPoint(IPAddress.Loopback, 18211)),
-                new SwimMeta(),
+                new SwimMeta(new Dictionary<string, string>()),
                 new SwimClientOptions { Logger = logger }
             );
             await client2.StartAsync();
