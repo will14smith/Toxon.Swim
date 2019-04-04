@@ -21,7 +21,7 @@ namespace Toxon.Swim.Services
         private readonly ConcurrentDictionary<ulong, CancellationTokenSource> _seqTimeouts = new ConcurrentDictionary<ulong, CancellationTokenSource>();
         private readonly ConcurrentDictionary<ulong, Action> _seqCallbacks = new ConcurrentDictionary<ulong, Action>();
 
-        public event HostSuspectEvent HostSuspect;
+        public event HostSuspectEvent OnHostSuspect;
 
         public FailureDetector(SwimTransport transport, FailureDetectorOptions options)
         {
@@ -85,7 +85,7 @@ namespace Toxon.Swim.Services
 
             var cts = TimerUtils.SetTimer(() =>
             {
-                HostSuspect?.Invoke(this, new HostSuspectEventArgs(targetHost));
+                OnHostSuspect?.Invoke(this, new HostSuspectEventArgs(targetHost));
             }, _options.PingReqTimeout);
 
             foreach (var relayHost in relayHosts)

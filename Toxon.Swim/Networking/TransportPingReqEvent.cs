@@ -1,5 +1,4 @@
-﻿using System.Net;
-using Toxon.Swim.Messages;
+﻿using Toxon.Swim.Messages;
 using Toxon.Swim.Models;
 
 namespace Toxon.Swim.Networking
