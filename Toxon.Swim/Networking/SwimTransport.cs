@@ -18,6 +18,8 @@ namespace Toxon.Swim.Networking
         public event TransportPingEvent OnPing;
         public event TransportPingReqEvent OnPingReq;
         public event TransportAckEvent OnAck;
+        public event TransportSyncEvent OnSync;
+        public event TransportUpdateEvent OnUpdate;
 
         public Task StartAsync()
         {
@@ -53,6 +55,12 @@ namespace Toxon.Swim.Networking
                     break;
                 case SwimMessageType.Ack:
                     OnAck?.Invoke(this, new TransportAckEventArgs(message as AckMessage, remote));
+                    break;
+                case SwimMessageType.Sync:
+                    OnSync?.Invoke(this, new TransportSyncEventArgs(message as SyncMessage, remote));
+                    break;
+                case SwimMessageType.Update:
+                    OnUpdate?.Invoke(this, new TransportUpdateEventArgs(message as UpdateMessage, remote));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

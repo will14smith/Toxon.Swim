@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using MessagePack;
 using MessagePack.Formatters;
+using Toxon.Swim.Membership;
 using Toxon.Swim.Messages;
 using Toxon.Swim.Models;
 
@@ -23,7 +25,7 @@ namespace Toxon.Swim.Serialization
         {
             if (typeof(T) == typeof(SwimMessage))
             {
-                return (IMessagePackFormatter<T>) this;
+                return (IMessagePackFormatter<T>)this;
             }
 
             return MessagePack.Resolvers.StandardResolver.Instance.GetFormatter<T>();
@@ -31,7 +33,7 @@ namespace Toxon.Swim.Serialization
 
         public int Serialize(ref byte[] bytes, int offset, SwimMessage value, IFormatterResolver formatterResolver)
         {
-            var length = MessagePackBinary.WriteByte(ref bytes, offset, (byte) value.Type);
+            var length = MessagePackBinary.WriteByte(ref bytes, offset, (byte)value.Type);
 
             switch (value)
             {
@@ -43,9 +45,14 @@ namespace Toxon.Swim.Serialization
                     break;
                 case PingReqMessage pingReqMessage:
                     length += MessagePackBinary.WriteUInt64(ref bytes, offset + length, pingReqMessage.SequenceNumber);
-                    var pingReqDest = pingReqMessage.Destination.AsIPEndPoint();
-                    length += MessagePackBinary.WriteBytes(ref bytes, offset + length, pingReqDest.Address.GetAddressBytes());
-                    length += MessagePackBinary.WriteUInt16(ref bytes, offset + length, (ushort) pingReqDest.Port);
+                    var pingReqDest = pingReqMessage.Destination;
+                    length += SerializeHost(ref bytes, offset + length, pingReqDest);
+                    break;
+                case SyncMessage syncMessage:
+                    length += SerializeMember(ref bytes, offset + length, syncMessage.Member);
+                    break;
+                case UpdateMessage updateMessage:
+                    length += SerializeMember(ref bytes, offset + length, updateMessage.Member);
                     break;
 
                 default: throw new ArgumentOutOfRangeException(nameof(value));
@@ -54,11 +61,41 @@ namespace Toxon.Swim.Serialization
             return length;
         }
 
+        private static int SerializeHost(ref byte[] bytes, int offset, SwimHost host)
+        {
+            var endpoint = host.AsIPEndPoint();
+
+            var length = 0;
+
+            length += MessagePackBinary.WriteBytes(ref bytes, offset, endpoint.Address.GetAddressBytes());
+            length += MessagePackBinary.WriteUInt16(ref bytes, offset + length, (ushort)endpoint.Port);
+
+            return length;
+        }
+
+        private int SerializeMember(ref byte[] bytes, int offset, SwimMember member)
+        {
+            var length = 0;
+
+            length += SerializeHost(ref bytes, offset + length, member.Host);
+            length += MessagePackBinary.WriteMapHeader(ref bytes, offset + length, member.Meta.Fields.Count);
+            foreach (var kvp in member.Meta.Fields)
+            {
+                length += MessagePackBinary.WriteString(ref bytes, offset + length, kvp.Key);
+                length += MessagePackBinary.WriteString(ref bytes, offset + length, kvp.Value);
+            }
+
+            length += MessagePackBinary.WriteByte(ref bytes, offset, (byte)member.State);
+            length += MessagePackBinary.WriteInt32(ref bytes, offset, member.Incarnation);
+            
+            return length;
+        }
+
         public SwimMessage Deserialize(byte[] bytes, int offset, IFormatterResolver formatterResolver, out int readSize)
         {
             readSize = 0;
 
-            var type = (SwimMessageType) MessagePackBinary.ReadByte(bytes, offset, out var r);
+            var type = (SwimMessageType)MessagePackBinary.ReadByte(bytes, offset, out var r);
             readSize += r;
 
             switch (type)
@@ -71,11 +108,8 @@ namespace Toxon.Swim.Serialization
                 case SwimMessageType.PingReq:
                     var pingReqSeq = MessagePackBinary.ReadUInt64(bytes, offset + readSize, out r);
                     readSize += r;
-                    var pingReqDestIp = MessagePackBinary.ReadBytes(bytes, offset + readSize, out r);
+                    var pingReqDest = DeserializeHost(bytes, offset + readSize, out r);
                     readSize += r;
-                    var pingReqDestPort = MessagePackBinary.ReadUInt16(bytes, offset + readSize, out r);
-                    readSize += r;
-                    var pingReqDest = new SwimHost(new IPEndPoint(new IPAddress(pingReqDestIp), pingReqDestPort));
 
                     return new PingReqMessage(pingReqSeq, pingReqDest);
                 case SwimMessageType.Ack:
@@ -83,9 +117,59 @@ namespace Toxon.Swim.Serialization
                     readSize += r;
 
                     return new AckMessage(ackSeq);
+                case SwimMessageType.Sync:
+                    var syncMember = DeserializeMember(bytes, offset + readSize, out r);
+                    readSize += r;
+
+                    return new SyncMessage(syncMember);
+                case SwimMessageType.Update:
+                    var updateMember = DeserializeMember(bytes, offset + readSize, out r);
+                    readSize += r;
+
+                    return new UpdateMessage(updateMember);
 
                 default: throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private SwimHost DeserializeHost(byte[] bytes, int offset, out int readSize)
+        {
+            readSize = 0;
+
+            var addressBytes = MessagePackBinary.ReadBytes(bytes, offset + readSize, out var r);
+            readSize += r;
+            var port = MessagePackBinary.ReadUInt16(bytes, offset + readSize, out r);
+            readSize += r;
+
+            return new SwimHost(new IPEndPoint(new IPAddress(addressBytes), port));
+        }
+
+        private SwimMember DeserializeMember(byte[] bytes, int offset, out int readSize)
+        {
+            readSize = 0;
+
+            var host = DeserializeHost(bytes, offset + readSize, out var r);
+            readSize += r;
+
+            var metaCount = MessagePackBinary.ReadMapHeader(bytes, offset + readSize, out r);
+            readSize += r;
+            var meta = new Dictionary<string, string>();
+            for(var i = 0; i < metaCount; i++)
+            {
+                var key = MessagePackBinary.ReadString(bytes, offset + readSize, out r);
+                readSize += r;
+                var value = MessagePackBinary.ReadString(bytes, offset + readSize, out r);
+                readSize += r;
+
+                meta.Add(key, value);
+            }
+
+            var state = (SwimMemberState)MessagePackBinary.ReadByte(bytes, offset + readSize, out r);
+            readSize += r;
+            var incarnation = MessagePackBinary.ReadInt32(bytes, offset + readSize, out r);
+            readSize += r;
+
+            return new SwimMember(host, new SwimMeta(meta), state, incarnation);
         }
     }
 }
