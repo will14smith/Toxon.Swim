@@ -14,6 +14,7 @@ namespace Toxon.Swim.Services
 
         public TimeSpan PingTimeout { get; set; } = TimeSpan.FromMilliseconds(5);
         public TimeSpan PingReqTimeout { get; set; } = TimeSpan.FromMilliseconds(15);
+        public int PingReqGroupSize { get; set; } = 3;
         public TimeSpan PingInterval { get; set; } = TimeSpan.FromMilliseconds(25);
     }
 }

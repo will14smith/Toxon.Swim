@@ -21,5 +21,37 @@ namespace Toxon.Swim.Models
         {
             return new SwimMember(Host, Meta, newState, Incarnation);
         }
+        public SwimMember WithMeta(SwimMeta newMeta)
+        {
+            return new SwimMember(Host, newMeta, State, Incarnation);
+        }
+        public SwimMember IncrementIncarnation()
+        {
+            return new SwimMember(Host, Meta, State, Incarnation + 1);
+        }
+
+        public bool TryIncarnate(SwimMember member, bool force, out SwimMember target)
+        {
+            if (member == null)
+            {
+                target = IncrementIncarnation();
+                return true;
+            }
+
+            if (member.Incarnation > Incarnation)
+            {
+                target = WithMeta(member.Meta).IncrementIncarnation();
+                return true;
+            }
+
+            if (member.Incarnation == Incarnation && force)
+            {
+                target = IncrementIncarnation();
+                return true;
+            }
+
+            target = this;
+            return false;
+        }
     }
 }

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using Toxon.Swim.Membership;
 using Toxon.Swim.Messages;
 using Toxon.Swim.Models;
 using Toxon.Swim.Networking;
@@ -13,6 +15,7 @@ namespace Toxon.Swim.Services
     public class FailureDetector
     {
         private readonly SwimTransport _transport;
+        private readonly MembershipList _membershipList;
         private readonly FailureDetectorOptions _options;
         private readonly Timer _timer;
 
@@ -23,9 +26,10 @@ namespace Toxon.Swim.Services
 
         public event HostSuspectEvent OnHostSuspect;
 
-        public FailureDetector(SwimTransport transport, FailureDetectorOptions options)
+        public FailureDetector(SwimTransport transport, MembershipList membershipList, FailureDetectorOptions options)
         {
             _transport = transport;
+            _membershipList = membershipList;
             _options = options;
 
             _timer = new Timer
@@ -81,7 +85,7 @@ namespace Toxon.Swim.Services
         private async Task PingReqAsync(SwimHost targetHost)
         {
             // TODO ping random N hosts
-            var relayHosts = new[] { targetHost };
+            var relayHosts = _membershipList.GetRandom(_options.PingReqGroupSize).Select(member => member.Host);
 
             var cts = TimerUtils.SetTimer(() =>
             {
@@ -117,7 +121,13 @@ namespace Toxon.Swim.Services
 
         private void TickPing(object sender, ElapsedEventArgs e)
         {
-            // TODO ping "random" host
+            var host = _membershipList.Next()?.Host;
+            if (host == null)
+            {
+                return;
+            }
+
+            PingAsync(host);
         }
 
         private void HandlePing(object sender, TransportPingEventArgs args)

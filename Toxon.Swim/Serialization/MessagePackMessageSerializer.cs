@@ -61,36 +61,6 @@ namespace Toxon.Swim.Serialization
             return length;
         }
 
-        private static int SerializeHost(ref byte[] bytes, int offset, SwimHost host)
-        {
-            var endpoint = host.AsIPEndPoint();
-
-            var length = 0;
-
-            length += MessagePackBinary.WriteBytes(ref bytes, offset, endpoint.Address.GetAddressBytes());
-            length += MessagePackBinary.WriteUInt16(ref bytes, offset + length, (ushort)endpoint.Port);
-
-            return length;
-        }
-
-        private int SerializeMember(ref byte[] bytes, int offset, SwimMember member)
-        {
-            var length = 0;
-
-            length += SerializeHost(ref bytes, offset + length, member.Host);
-            length += MessagePackBinary.WriteMapHeader(ref bytes, offset + length, member.Meta.Fields.Count);
-            foreach (var kvp in member.Meta.Fields)
-            {
-                length += MessagePackBinary.WriteString(ref bytes, offset + length, kvp.Key);
-                length += MessagePackBinary.WriteString(ref bytes, offset + length, kvp.Value);
-            }
-
-            length += MessagePackBinary.WriteByte(ref bytes, offset, (byte)member.State);
-            length += MessagePackBinary.WriteInt32(ref bytes, offset, member.Incarnation);
-            
-            return length;
-        }
-
         public SwimMessage Deserialize(byte[] bytes, int offset, IFormatterResolver formatterResolver, out int readSize)
         {
             readSize = 0;
@@ -132,6 +102,18 @@ namespace Toxon.Swim.Serialization
             }
         }
 
+        private static int SerializeHost(ref byte[] bytes, int offset, SwimHost host)
+        {
+            var endpoint = host.AsIPEndPoint();
+
+            var length = 0;
+
+            length += MessagePackBinary.WriteBytes(ref bytes, offset + length, endpoint.Address.GetAddressBytes());
+            length += MessagePackBinary.WriteUInt16(ref bytes, offset + length, (ushort)endpoint.Port);
+
+            return length;
+        }
+
         private SwimHost DeserializeHost(byte[] bytes, int offset, out int readSize)
         {
             readSize = 0;
@@ -142,6 +124,25 @@ namespace Toxon.Swim.Serialization
             readSize += r;
 
             return new SwimHost(new IPEndPoint(new IPAddress(addressBytes), port));
+        }
+
+
+        private int SerializeMember(ref byte[] bytes, int offset, SwimMember member)
+        {
+            var length = 0;
+
+            length += SerializeHost(ref bytes, offset + length, member.Host);
+            length += MessagePackBinary.WriteMapHeader(ref bytes, offset + length, member.Meta.Fields.Count);
+            foreach (var kvp in member.Meta.Fields)
+            {
+                length += MessagePackBinary.WriteString(ref bytes, offset + length, kvp.Key);
+                length += MessagePackBinary.WriteString(ref bytes, offset + length, kvp.Value);
+            }
+
+            length += MessagePackBinary.WriteByte(ref bytes, offset + length, (byte)member.State);
+            length += MessagePackBinary.WriteInt32(ref bytes, offset + length, member.Incarnation);
+
+            return length;
         }
 
         private SwimMember DeserializeMember(byte[] bytes, int offset, out int readSize)

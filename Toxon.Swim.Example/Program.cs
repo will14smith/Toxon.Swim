@@ -12,26 +12,30 @@ namespace Toxon.Swim.Example
         static async Task Main(string[] args)
         {
             var logger = new LoggerConfiguration()
-                .WriteTo.Async(a => a.Console())
-                .MinimumLevel.Debug()
-                .CreateLogger();
+                .WriteTo.Async(a => a.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}"))
+                // .MinimumLevel.Debug()
+                .CreateLogger()
+                ;
 
             var client1 = new SwimClient(
                 new SwimHost(new IPEndPoint(IPAddress.Loopback, 18210)),
                 new SwimMeta(new Dictionary<string, string>()),
-                new SwimClientOptions { Logger = logger }
+                new SwimClientOptions { Logger = logger.ForContext("client", 18210) }
             );
             await client1.StartAsync();
 
-            var client2 = new SwimClient(
-                new SwimHost(new IPEndPoint(IPAddress.Loopback, 18211)),
-                new SwimMeta(new Dictionary<string, string>()),
-                new SwimClientOptions { Logger = logger }
-            );
-            await client2.StartAsync();
-            await client2.JoinAsync(new[] { client1.Local });
+            for (var i = 0; i < 5; i++)
+            {
+                var client2 = new SwimClient(
+                    new SwimHost(new IPEndPoint(IPAddress.Loopback, 18211 + i)),
+                    new SwimMeta(new Dictionary<string, string>()),
+                    new SwimClientOptions {Logger = logger.ForContext("client", 18211 + i)}
+                );
+                await client2.StartAsync();
+                await client2.JoinAsync(new[] {client1.Local});
+            }
 
-            Console.WriteLine("Both clients are running...");
+            Console.WriteLine("All clients are running...");
             Console.ReadLine();
         }
     }

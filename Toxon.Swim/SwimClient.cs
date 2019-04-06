@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Toxon.Swim.Messages;
+using Toxon.Swim.Membership;
 using Toxon.Swim.Models;
 using Toxon.Swim.Networking;
 using Toxon.Swim.Services;
@@ -14,45 +14,48 @@ namespace Toxon.Swim
         private readonly SwimClientOptions _options;
 
         public SwimHost Local { get; }
-        public SwimMeta Meta { get; private set; }
         
         internal SwimTransport Transport { get; }
+        internal MembershipList MembershipList { get; }
         internal FailureDetector FailureDetector { get; }
-
-        public event MembershipChangedEvent MembershipChanged;
-        public event MembershipUpdatedEvent MembershipUpdated;
+        internal MembershipMonitor MembershipMonitor { get; }
 
         public SwimClient(SwimHost local, SwimMeta initialMeta, SwimClientOptions options)
         {
             Local = local;
             _options = options;
 
-            Meta = initialMeta;
-
             Transport = new SwimTransport(new UdpTransport(local, new UdpTransportOptions(options.MessageSerializer, options.Logger)));
-            FailureDetector = new FailureDetector(Transport, new FailureDetectorOptions(options.Logger));
+            MembershipList = new MembershipList(local, initialMeta);
+            FailureDetector = new FailureDetector(Transport, MembershipList, new FailureDetectorOptions(options.Logger));
+            MembershipMonitor = new MembershipMonitor(MembershipList, Transport, FailureDetector, new MembershipMonitorOptions());
+
+            MembershipList.OnJoined += (_, args) => options.Logger.Information("Host {host} joined", args.Member.Host);
+            MembershipList.OnUpdated += (_, args) => options.Logger.Information("Host {host} updated", args.Member.Host);
+            MembershipList.OnLeft += (_, args) => options.Logger.Information("Host {host} left", args.Member.Host);
         }
 
         public async Task StartAsync()
         {
             await Transport.StartAsync();
             await FailureDetector.StartAsync();
+            await MembershipMonitor.StartAsync();
         }
 
         public async Task JoinAsync(IReadOnlyCollection<SwimHost> hosts)
         {
-            await FailureDetector.PingAsync(hosts.First());
-            // throw new NotImplementedException("Try to contact hosts to join a cluster");
-        }
+            var filteredHosts = hosts.Where(x => x != Local);
 
-        public Task UpdateMetaAsync(SwimMeta newMeta)
-        {
-            Meta = newMeta;
-            throw new NotImplementedException("Tell others...");
+            await MembershipMonitor.SyncWithAsync(filteredHosts);
+
+            // TODO check at least 1 host has responded
         }
 
         public async Task LeaveAsync()
         {
+            // TODO tell others?
+
+            await MembershipMonitor.StopAsync();
             await FailureDetector.StopAsync();
             await Transport.StopAsync();
         }

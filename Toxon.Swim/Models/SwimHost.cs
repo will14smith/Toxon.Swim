@@ -17,6 +17,11 @@ namespace Toxon.Swim.Models
             return _endpoint;
         }
 
+        public override string ToString()
+        {
+            return $"{_endpoint}";
+        }
+
         public bool Equals(SwimHost other)
         {
             if (other is null) return false;
