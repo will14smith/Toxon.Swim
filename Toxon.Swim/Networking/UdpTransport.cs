@@ -11,16 +11,16 @@ namespace Toxon.Swim.Networking
 {
     public class UdpTransport : ITransport
     {
-        private readonly UdpClient _udpClient;
+        private readonly SwimHost _local;
         private readonly UdpTransportOptions _options;
 
+        private UdpClient _udpClient;
         private Thread _listenerThread;
         private CancellationTokenSource _listenerThreadCancel;
 
         public UdpTransport(SwimHost local, UdpTransportOptions options)
         {
-            _udpClient = new UdpClient(local.AsIPEndPoint());
-
+            _local = local;
             _options = options;
         }
 
@@ -28,6 +28,8 @@ namespace Toxon.Swim.Networking
 
         public Task StartAsync()
         {
+            _udpClient = new UdpClient(_local.AsIPEndPoint());
+
             if (_listenerThread != null)
             {
                 throw new InvalidOperationException();
@@ -44,6 +46,8 @@ namespace Toxon.Swim.Networking
         {
             _listenerThreadCancel.Cancel();
             _listenerThread = null;
+            _udpClient?.Dispose();
+            _udpClient = null;
 
             return Task.CompletedTask;
         }
@@ -63,8 +67,15 @@ namespace Toxon.Swim.Networking
                 {
                     break;
                 }
+                catch (SocketException ex)
+                {
+                    if (ex.SocketErrorCode == SocketError.ConnectionReset)
+                    {
+                        continue;
+                    }
 
-                _options.Logger.Debug("Received buffer from {from} with a length of {length} bytes", result.RemoteEndPoint, result.Buffer.Length);
+                    throw;
+                }
 
                 var offset = 0;
                 while (offset < result.Buffer.Length)

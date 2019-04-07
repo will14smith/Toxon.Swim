@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using MessagePack;
 using MessagePack.Formatters;
-using Toxon.Swim.Membership;
 using Toxon.Swim.Messages;
 using Toxon.Swim.Models;
 

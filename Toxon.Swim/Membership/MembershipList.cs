@@ -135,19 +135,24 @@ namespace Toxon.Swim.Membership
             while (count > 0 && list.Count > 0)
             {
                 var index = r.Next(0, list.Count);
-
                 var member = _members[list[index]];
+                list.RemoveAt(index);
+
                 if (member.State == SwimMemberState.Faulty)
                 {
                     continue;
                 }
-
-                list.RemoveAt(index);
-
+                
                 result.Add(member);
             }
 
             return result;
+        }
+
+        public void UpdateMeta(SwimMeta meta)
+        {
+            Local = Local.WithMeta(meta).IncrementIncarnation();
+            OnUpdated?.Invoke(this, new MembershipUpdatedEventArgs(Local));
         }
 
         private bool TryAdd(SwimMember member)
@@ -260,7 +265,7 @@ namespace Toxon.Swim.Membership
             }
 
             var memberCurrent = GetFromHost(member.Host);
-            if (memberCurrent != null && member.Incarnation >= memberCurrent.Incarnation)
+            if (memberCurrent != null && member.Incarnation >= memberCurrent.Incarnation && memberCurrent.State != SwimMemberState.Faulty)
             {
                 _members.TryUpdate(member.Host, member, memberCurrent);
                 OnLeft?.Invoke(this, new MemberLeftEventArgs(member));

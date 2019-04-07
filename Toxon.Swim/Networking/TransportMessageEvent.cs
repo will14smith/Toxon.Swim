@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net;
-using Toxon.Swim.Messages;
 
 namespace Toxon.Swim.Networking
 {

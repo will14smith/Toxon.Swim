@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Toxon.Swim.Messages;
 using Toxon.Swim.Models;
 
 namespace Toxon.Swim.Networking

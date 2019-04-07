@@ -67,7 +67,6 @@ namespace Toxon.Swim.Services
         public async Task PingAsync(SwimHost host)
         {
             var seq = (ulong)Interlocked.Increment(ref _seq);
-            _options.Logger.Debug("Pinging {remote} with sequence id of {seq}", host.AsIPEndPoint(), seq);
 
             var cts = TimerUtils.SetTimer(() =>
             {
@@ -101,7 +100,6 @@ namespace Toxon.Swim.Services
         private async Task PingReqAsync(SwimHost targetHost, SwimHost relayHost, Action callback)
         {
             var seq = (ulong)Interlocked.Increment(ref _seq);
-            _options.Logger.Debug("Pinging {remote} via {relay} with sequence id of {seq}", targetHost.AsIPEndPoint(), relayHost.AsIPEndPoint(), seq);
 
             var cts = TimerUtils.SetTimer(() => CleanupSeq(seq), _options.PingTimeout);
             void SeqCallback()
@@ -135,8 +133,6 @@ namespace Toxon.Swim.Services
             var seq = args.Message.SequenceNumber;
             var remote = args.Remote;
 
-            _options.Logger.Debug("Received ping from {remote} with sequence id of {seq}", remote.AsIPEndPoint(), seq);
-
             _transport.SendAsync(new[]
             {
                 new AckMessage(seq),
@@ -148,8 +144,6 @@ namespace Toxon.Swim.Services
 
             var destinationHost = args.Message.Destination;
             var relayHost = args.Remote;
-
-            _options.Logger.Debug("Pinging {remote} for {relay} with sequence id of ({inSeq}:{outSeq})", destinationHost.AsIPEndPoint(), relayHost.AsIPEndPoint(), args.Message.SequenceNumber, seq);
 
             var cts = TimerUtils.SetTimer(() => CleanupSeq(seq), _options.PingTimeout);
             Action callback = () =>
@@ -172,7 +166,6 @@ namespace Toxon.Swim.Services
         private void HandleAck(object sender, TransportAckEventArgs args)
         {
             var seq = args.Message.SequenceNumber;
-            _options.Logger.Debug("Received ack from {remote} with sequence id of {seq}", args.Remote.AsIPEndPoint(), seq);
 
             var hasCallback = _seqCallbacks.TryGetValue(seq, out var callback);
             CleanupSeq(seq);

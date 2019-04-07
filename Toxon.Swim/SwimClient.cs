@@ -11,8 +11,6 @@ namespace Toxon.Swim
 {
     public class SwimClient
     {
-        private readonly SwimClientOptions _options;
-
         public SwimHost Local { get; }
         public MembershipList Members { get; }
 
@@ -24,11 +22,10 @@ namespace Toxon.Swim
         public SwimClient(SwimHost local, SwimMeta initialMeta, SwimClientOptions options)
         {
             Local = local;
-            _options = options;
 
             Members = new MembershipList(local, initialMeta);
             Disseminator = new Disseminator(Members, new DisseminatorOptions());
-            Transport = new SwimTransport(new UdpTransport(local, new UdpTransportOptions(options.Logger)), Disseminator, options.MessageSerializer);
+            Transport = new SwimTransport(new UdpTransport(local, new UdpTransportOptions()), Disseminator, options.MessageSerializer);
             FailureDetector = new FailureDetector(Transport, Members, new FailureDetectorOptions(options.Logger));
             MembershipMonitor = new MembershipMonitor(Members, Transport, FailureDetector, new MembershipMonitorOptions());
 
@@ -52,6 +49,11 @@ namespace Toxon.Swim
             await MembershipMonitor.SyncWithAsync(filteredHosts);
 
             // TODO check at least 1 host has responded
+        }
+
+        public void UpdateMeta(SwimMeta meta)
+        {
+            Members.UpdateMeta(meta);
         }
 
         public async Task LeaveAsync()

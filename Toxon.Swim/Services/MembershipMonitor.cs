@@ -82,7 +82,7 @@ namespace Toxon.Swim.Services
             }
             if (!_suspectTimeouts.TryAdd(args.Host, suspectTimeout))
             {
-                throw new NotImplementedException("Replace with remove(+cancel)/add with 'upsert'(+cancel)");
+                // throw new NotImplementedException("Replace with remove(+cancel)/add with 'upsert'(+cancel)");
             }
 
             _membership.UpdateState(args.Host, SwimMemberState.Suspect);
