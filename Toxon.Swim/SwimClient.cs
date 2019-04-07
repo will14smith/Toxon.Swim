@@ -16,6 +16,7 @@ namespace Toxon.Swim
         public SwimHost Local { get; }
         public MembershipList Members { get; }
 
+        internal Disseminator Disseminator { get; }
         internal SwimTransport Transport { get; }
         internal FailureDetector FailureDetector { get; }
         internal MembershipMonitor MembershipMonitor { get; }
@@ -25,8 +26,9 @@ namespace Toxon.Swim
             Local = local;
             _options = options;
 
-            Transport = new SwimTransport(new UdpTransport(local, new UdpTransportOptions(options.Logger)), options.MessageSerializer);
             Members = new MembershipList(local, initialMeta);
+            Disseminator = new Disseminator(Members, new DisseminatorOptions());
+            Transport = new SwimTransport(new UdpTransport(local, new UdpTransportOptions(options.Logger)), Disseminator, options.MessageSerializer);
             FailureDetector = new FailureDetector(Transport, Members, new FailureDetectorOptions(options.Logger));
             MembershipMonitor = new MembershipMonitor(Members, Transport, FailureDetector, new MembershipMonitorOptions());
 
@@ -37,6 +39,7 @@ namespace Toxon.Swim
 
         public async Task StartAsync()
         {
+            await Disseminator.StartAsync();
             await Transport.StartAsync();
             await FailureDetector.StartAsync();
             await MembershipMonitor.StartAsync();
@@ -58,6 +61,7 @@ namespace Toxon.Swim
             await MembershipMonitor.StopAsync();
             await FailureDetector.StopAsync();
             await Transport.StopAsync();
+            await Disseminator.StopAsync();
         }
     }
 }

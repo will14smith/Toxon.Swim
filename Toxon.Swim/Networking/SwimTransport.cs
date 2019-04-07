@@ -5,17 +5,20 @@ using System.Threading.Tasks;
 using Toxon.Swim.Messages;
 using Toxon.Swim.Models;
 using Toxon.Swim.Serialization;
+using Toxon.Swim.Services;
 
 namespace Toxon.Swim.Networking
 {
     public class SwimTransport
     {
         private readonly ITransport _transport;
+        private readonly Disseminator _disseminator;
         private readonly IMessageSerializer _messageSerializer;
 
-        public SwimTransport(ITransport transport, IMessageSerializer messageSerializer)
+        public SwimTransport(ITransport transport, Disseminator disseminator, IMessageSerializer messageSerializer)
         {
             _transport = transport;
+            _disseminator = disseminator;
             _messageSerializer = messageSerializer;
         }
 
@@ -34,17 +37,26 @@ namespace Toxon.Swim.Networking
 
         public async Task SendAsync(IReadOnlyCollection<SwimMessage> messages, SwimHost host)
         {
-            IReadOnlyCollection<ReadOnlyMemory<byte>> buffers = messages.Select(x => _messageSerializer.Serialize(x)).ToList();
+            var piggybackMessages = _disseminator.GetMessages().ToList();
+            var allMessages = messages.Concat(piggybackMessages);
 
-            while (buffers.Count > 0)
+            IReadOnlyCollection<ReadOnlyMemory<byte>> buffers = allMessages.Select(x => _messageSerializer.Serialize(x)).ToList();
+
+            while (buffers.Count > piggybackMessages.Count)
             {
                 var newBuffers = await _transport.SendAsync(buffers, host);
                 if (newBuffers.Count == buffers.Count)
                 {
                     throw new Exception("Failed to send first message");
                 }
-
+                
                 buffers = newBuffers;
+            }
+
+            var numOfPiggybackMessagesSent = piggybackMessages.Count - buffers.Count;
+            for (var i = 0; i < numOfPiggybackMessagesSent; i++)
+            {
+                _disseminator.MarkMessageAsSent(piggybackMessages[i]);
             }
         }
 

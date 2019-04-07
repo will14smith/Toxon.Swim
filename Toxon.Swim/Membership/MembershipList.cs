@@ -61,6 +61,22 @@ namespace Toxon.Swim.Membership
 
             return members;
         }
+        public int Count(bool includeLocal = false, bool includeFaulty = false)
+        {
+            var members = _members.Count;
+
+            if (includeLocal)
+            {
+                members++;
+            }
+
+            if (!includeFaulty)
+            {
+                members -= _members.Select(x => x.Value).Count(x => x.State == SwimMemberState.Faulty);
+            }
+
+            return members;
+        }
 
         public SwimMember GetFromHost(SwimHost host)
         {
@@ -92,15 +108,20 @@ namespace Toxon.Swim.Membership
 
         private void RequeueAll()
         {
-            // TODO randomize order
-            foreach (var kvp in _members)
+            var members = _members.Values.ToList();
+
+            var random = new Random();
+
+            for (var i = members.Count - 1; i > 1; i--)
             {
-                if (kvp.Value.State == SwimMemberState.Faulty)
+                var rnd = random.Next(i + 1);
+
+                if (members[i].State != SwimMemberState.Faulty)
                 {
-                    continue;
+                    _queue.Enqueue(members[i].Host);
                 }
 
-                _queue.Enqueue(kvp.Key);
+                members[i] = members[rnd];
             }
         }
 
@@ -188,7 +209,7 @@ namespace Toxon.Swim.Membership
                 OnUpdateDropped?.Invoke(this, new MemberDroppedEventArgs(member));
             }
         }
-        
+
         private void UpdateSuspect(SwimMember member)
         {
             if (IsLocal(member))

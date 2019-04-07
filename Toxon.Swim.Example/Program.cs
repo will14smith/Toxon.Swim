@@ -56,6 +56,13 @@ namespace Toxon.Swim.Example
                         Console.WriteLine();
                     }
                 }
+                else if (line == "c")
+                {
+                    foreach (var (id, client) in clients)
+                    {
+                        Console.WriteLine($"Client {id} - {client.Members.Count()}");
+                    }
+                }
                 else
                 {
                     break;
