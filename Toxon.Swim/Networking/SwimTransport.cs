@@ -1,18 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Toxon.Swim.Messages;
 using Toxon.Swim.Models;
+using Toxon.Swim.Serialization;
 
 namespace Toxon.Swim.Networking
 {
     public class SwimTransport
     {
         private readonly ITransport _transport;
+        private readonly IMessageSerializer _messageSerializer;
 
-        public SwimTransport(ITransport transport)
+        public SwimTransport(ITransport transport, IMessageSerializer messageSerializer)
         {
             _transport = transport;
+            _messageSerializer = messageSerializer;
         }
 
         public event TransportPingEvent OnPing;
@@ -28,9 +32,20 @@ namespace Toxon.Swim.Networking
             return _transport.StartAsync();
         }
 
-        public Task SendAsync(IReadOnlyCollection<SwimMessage> messages, SwimHost host)
+        public async Task SendAsync(IReadOnlyCollection<SwimMessage> messages, SwimHost host)
         {
-            return _transport.SendAsync(messages, host);
+            IReadOnlyCollection<ReadOnlyMemory<byte>> buffers = messages.Select(x => _messageSerializer.Serialize(x)).ToList();
+
+            while (buffers.Count > 0)
+            {
+                var newBuffers = await _transport.SendAsync(buffers, host);
+                if (newBuffers.Count == buffers.Count)
+                {
+                    throw new Exception("Failed to send first message");
+                }
+
+                buffers = newBuffers;
+            }
         }
 
         public Task StopAsync()
@@ -42,7 +57,9 @@ namespace Toxon.Swim.Networking
 
         private void HandleMessage(object sender, TransportMessageEventArgs args)
         {
-            var message = args.Message;
+            var buffer = args.Buffer;
+            var message = _messageSerializer.Deserialize(buffer.Span);
+
             var remote = new SwimHost(args.RemoteEndpoint);
 
             switch (message.Type)
