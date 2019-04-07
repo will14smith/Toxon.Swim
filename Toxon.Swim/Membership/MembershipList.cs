@@ -16,7 +16,7 @@ namespace Toxon.Swim.Membership
         }
 
         private readonly ConcurrentDictionary<SwimHost, SwimMember> _members = new ConcurrentDictionary<SwimHost, SwimMember>();
-        private readonly ConcurrentQueue<SwimMember> _queue = new ConcurrentQueue<SwimMember>();
+        private readonly ConcurrentQueue<SwimHost> _queue = new ConcurrentQueue<SwimHost>();
 
         public event MemberChangedEvent OnJoined;
         public event MemberUpdatedEvent OnUpdated;
@@ -33,12 +33,13 @@ namespace Toxon.Swim.Membership
             switch (member.State)
             {
                 case SwimMemberState.Alive: UpdateAlive(member); break;
-                case SwimMemberState.Suspect: throw new NotImplementedException();
-                case SwimMemberState.Faulty: throw new NotImplementedException();
+                case SwimMemberState.Suspect: UpdateSuspect(member); break;
+                case SwimMemberState.Faulty: UpdateFaulty(member); break;
 
                 default: throw new ArgumentOutOfRangeException();
             }
         }
+
         public void UpdateState(SwimHost host, SwimMemberState state)
         {
             Update(_members[host].WithState(state));
@@ -68,26 +69,38 @@ namespace Toxon.Swim.Membership
 
         public SwimMember Next()
         {
-            if (_queue.IsEmpty)
+            while (true)
             {
-                RequeueAll();
-            }
+                if (_queue.IsEmpty)
+                {
+                    RequeueAll();
+                }
 
-            if (_queue.TryDequeue(out var member))
-            {
-                // get the latest version (queue member might have been updated)
-                return _members[member.Host];
-            }
+                if (_queue.TryDequeue(out var host))
+                {
+                    var member = _members[host];
+                    if (member.State == SwimMemberState.Faulty)
+                    {
+                        continue;
+                    }
+                    return member;
+                }
 
-            return null;
+                return null;
+            }
         }
 
         private void RequeueAll()
         {
             // TODO randomize order
-            foreach (var member in _members.Values)
+            foreach (var kvp in _members)
             {
-                _queue.Enqueue(member);
+                if (kvp.Value.State == SwimMemberState.Faulty)
+                {
+                    continue;
+                }
+
+                _queue.Enqueue(kvp.Key);
             }
         }
 
@@ -101,10 +114,16 @@ namespace Toxon.Swim.Membership
             while (count > 0 && list.Count > 0)
             {
                 var index = r.Next(0, list.Count);
-                var item = list[index];
+
+                var member = _members[list[index]];
+                if (member.State == SwimMemberState.Faulty)
+                {
+                    continue;
+                }
+
                 list.RemoveAt(index);
 
-                result.Add(_members[item]);
+                result.Add(member);
             }
 
             return result;
@@ -112,18 +131,23 @@ namespace Toxon.Swim.Membership
 
         private bool TryAdd(SwimMember member)
         {
+            if (IsLocal(member))
+            {
+                throw new InvalidOperationException("Cannot add self to member list");
+            }
+
             if (!_members.TryAdd(member.Host, member))
             {
                 return false;
             }
-            _queue.Enqueue(member);
+            _queue.Enqueue(member.Host);
 
             return true;
         }
 
         private void UpdateAlive(SwimMember member)
         {
-            if (member.Host == Local.Host)
+            if (IsLocal(member))
             {
                 if (Local.TryIncarnate(member, false, out _local))
                 {
@@ -148,6 +172,7 @@ namespace Toxon.Swim.Membership
             {
                 if (memberCurrent == null)
                 {
+                    // TODO handle false
                     TryAdd(member);
                     OnJoined?.Invoke(this, new MembershipChangedEventArgs(member));
                 }
@@ -162,6 +187,73 @@ namespace Toxon.Swim.Membership
             {
                 OnUpdateDropped?.Invoke(this, new MemberDroppedEventArgs(member));
             }
+        }
+        
+        private void UpdateSuspect(SwimMember member)
+        {
+            if (IsLocal(member))
+            {
+                OnUpdateDropped?.Invoke(this, new MemberDroppedEventArgs(member));
+                Local.TryIncarnate(member, true, out _local);
+                OnUpdated?.Invoke(this, new MembershipUpdatedEventArgs(Local));
+                return;
+            }
+
+            var memberCurrent = GetFromHost(member.Host);
+            if (memberCurrent?.State == SwimMemberState.Faulty && memberCurrent.Incarnation >= member.Incarnation)
+            {
+                OnUpdateDropped?.Invoke(this, new MemberDroppedEventArgs(member));
+                return;
+            }
+
+            if (memberCurrent == null || member.Incarnation > memberCurrent.Incarnation || (member.Incarnation == memberCurrent.Incarnation && memberCurrent.State == SwimMemberState.Alive))
+            {
+                if (memberCurrent == null)
+                {
+                    // TODO handle false
+                    TryAdd(member);
+                    OnJoined?.Invoke(this, new MembershipChangedEventArgs(member));
+                }
+                else
+                {
+                    // TODO handle false
+                    _members.TryUpdate(member.Host, member, memberCurrent);
+                }
+
+                OnUpdated?.Invoke(this, new MembershipUpdatedEventArgs(member));
+            }
+            else
+            {
+                OnUpdateDropped?.Invoke(this, new MemberDroppedEventArgs(member));
+            }
+        }
+
+        private void UpdateFaulty(SwimMember member)
+        {
+            if (IsLocal(member))
+            {
+                OnUpdateDropped?.Invoke(this, new MemberDroppedEventArgs(member));
+                Local.TryIncarnate(member, true, out _local);
+                OnUpdated?.Invoke(this, new MembershipUpdatedEventArgs(Local));
+                return;
+            }
+
+            var memberCurrent = GetFromHost(member.Host);
+            if (memberCurrent != null && member.Incarnation >= memberCurrent.Incarnation)
+            {
+                _members.TryUpdate(member.Host, member, memberCurrent);
+                OnLeft?.Invoke(this, new MemberLeftEventArgs(member));
+                OnUpdated?.Invoke(this, new MembershipUpdatedEventArgs(member));
+            }
+            else
+            {
+                OnUpdateDropped?.Invoke(this, new MemberDroppedEventArgs(member));
+            }
+        }
+
+        private bool IsLocal(SwimMember member)
+        {
+            return member.Host == Local.Host;
         }
     }
 }

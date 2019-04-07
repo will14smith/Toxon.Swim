@@ -14,9 +14,9 @@ namespace Toxon.Swim
         private readonly SwimClientOptions _options;
 
         public SwimHost Local { get; }
-        
+        public MembershipList Members { get; }
+
         internal SwimTransport Transport { get; }
-        internal MembershipList MembershipList { get; }
         internal FailureDetector FailureDetector { get; }
         internal MembershipMonitor MembershipMonitor { get; }
 
@@ -25,14 +25,14 @@ namespace Toxon.Swim
             Local = local;
             _options = options;
 
-            Transport = new SwimTransport(new UdpTransport(local, new UdpTransportOptions(options.MessageSerializer, options.Logger)));
-            MembershipList = new MembershipList(local, initialMeta);
-            FailureDetector = new FailureDetector(Transport, MembershipList, new FailureDetectorOptions(options.Logger));
-            MembershipMonitor = new MembershipMonitor(MembershipList, Transport, FailureDetector, new MembershipMonitorOptions());
+            Transport = new SwimTransport(new UdpTransport(local, new UdpTransportOptions(options.Logger)), options.MessageSerializer);
+            Members = new MembershipList(local, initialMeta);
+            FailureDetector = new FailureDetector(Transport, Members, new FailureDetectorOptions(options.Logger));
+            MembershipMonitor = new MembershipMonitor(Members, Transport, FailureDetector, new MembershipMonitorOptions());
 
-            MembershipList.OnJoined += (_, args) => options.Logger.Information("Host {host} joined", args.Member.Host);
-            MembershipList.OnUpdated += (_, args) => options.Logger.Information("Host {host} updated", args.Member.Host);
-            MembershipList.OnLeft += (_, args) => options.Logger.Information("Host {host} left", args.Member.Host);
+            Members.OnJoined += (_, args) => options.Logger.Information("Host {host} joined", args.Member.Host);
+            Members.OnUpdated += (_, args) => options.Logger.Information("Host {host} updated", args.Member.Host);
+            Members.OnLeft += (_, args) => options.Logger.Information("Host {host} left", args.Member.Host);
         }
 
         public async Task StartAsync()
